@@ -13,22 +13,38 @@ require('dotenv').config()
 router.post('/signup',async(req,res)=>{  
 
     try {
-        const name = req.body.name;
+        const firstName = req.body.firstName;
+        const lastName = req.body.lastName;
         const email = req.body.email;
-        let password = req.body.password;
-       
+        const password = req.body.password;
+        const profilePic = req.body.profilePic;
+        const mobileNumber = req.body.mobileNumber;
+        const dateOfBirth = req.body.dateOfBirth;
+        const gender = req.body.gender;
+        const height = req.body.height;
+        const weight = req.body.weight;
+
         let exist = await db.User.findOne({ where: { email: email } })
         const hash_password = await bcrypt.hash(password, 10);
 
         const obj = {
-            name: name, email: email, password: hash_password
+            firstName: firstName,
+            lastName:lastName, 
+            email: email, 
+            password: hash_password,
+            profilePic:profilePic,
+            mobileNumber:mobileNumber,
+            dateOfBirth:dateOfBirth,
+            gender:gender,
+            height:height,
+            weight:weight
         }
         if (exist) {
             res.status(401).json({ message: "User Already Exist" })
 
         }
        else{
-        if (!name || !email || !password ) {
+        if (!firstName ||!lastName || !email || !password ||!profilePic  ||!mobileNumber ||!dateOfBirth ||!gender ||!height ||!weight ) {
            
             res.status(401).json({ message: "Enter All Values" })
         }
@@ -47,6 +63,109 @@ router.post('/signup',async(req,res)=>{
             res.status(200).json(response)
         }
     }
+    }
+    catch (err) {
+        res.status(500).send({error:"Internal Server Error"})
+    }
+})
+
+router.get('/getUserData/:id',async(req,res)=>{  
+
+    try {
+        const userID = req.params.id;
+
+        let userData = await db.User.findOne({ where: { id: userID } })
+        
+            // console.log('userData >> ',userData?.dataValues);
+
+            let response = {
+                message: "Successful",
+                data: userData?.dataValues,
+            }
+            res.status(200).json(response)
+        
+    
+    }
+    catch (err) {
+        // console.log('err >> ',err)
+        res.status(500).send({error:"Internal Server Error"})
+    }
+})
+
+router.put('/updateUserData/:id',async(req,res)=>{  
+
+    try {
+        const userID = req.params.id;
+        const firstName = req.body.firstName;
+        const lastName = req.body.lastName;
+        const email = req.body.email;
+        const password = req.body.password;
+        const profilePic = req.body.profilePic;
+        const mobileNumber = req.body.mobileNumber;
+        const dateOfBirth = req.body.dateOfBirth;
+        const gender = req.body.gender;
+        const height = req.body.height;
+        const weight = req.body.weight;
+
+        
+        const hash_password = await bcrypt.hash(password, 10);
+
+        const obj = {
+            firstName: firstName,
+            lastName:lastName, 
+            email: email, 
+            password: hash_password,
+            profilePic:profilePic,
+            mobileNumber:mobileNumber,
+            dateOfBirth:dateOfBirth,
+            gender:gender,
+            height:height,
+            weight:weight
+        }
+       
+        if (!firstName ||!lastName || !email || !password ||!profilePic  ||!mobileNumber ||!dateOfBirth ||!gender ||!height ||!weight ) {
+           
+            res.status(401).json({ message: "Enter All Values" })
+        }
+        else if (password.length < 8) {
+            
+            res.status(401).json({ message: "Password cannot be less than 8 characters" })
+        }
+        else {
+            // console.log(obj);
+            
+            let data = await db.User.update(obj,{ where: { id: userID } })
+
+            let response = {
+                message: "Successful",
+                data: data.dataValues,
+            }
+            res.status(200).json(response)
+        }
+    }
+    
+    catch (err) {
+        // console.log('err >> ',err)
+        res.status(500).send({error:"Internal Server Error"})
+    }
+})
+
+
+
+router.delete('/deleteUserData/:id',async(req,res)=>{  
+
+    try {
+       
+        const userID = req.params.id;
+
+        db.User.destroy({ where: { id: userID } })
+       
+
+            let response = {
+                message: "Successfully Deleted",
+            }
+            res.status(200).json(response)
+        
     }
     catch (err) {
         res.status(500).send({error:"Internal Server Error"})
