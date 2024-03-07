@@ -3,15 +3,19 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt =require('bcrypt'); 
 const db = require("../db")
+const { v4: uuidv4 } = require('uuid');
+const authTokenRequired = require('../middleware/authTokenRequired');
 require('dotenv').config()
 // const passport = require('passport');
 // const GoogleStrategy = require('passport-google-oauth20').Strategy;
 // const FacebookStrategy = require('passport-facebook').Strategy;
 // const twilio = require('twilio');
 // const { validationResult } = require('express-validator');
-
+function generateRequestId() {
+    return uuidv4();
+}
 router.post('/signup',async(req,res)=>{  
-
+    const requestId = generateRequestId();
     try {
         const firstName = req.body.firstName;
         const lastName = req.body.lastName;
@@ -23,6 +27,7 @@ router.post('/signup',async(req,res)=>{
         const gender = req.body.gender;
         const height = req.body.height;
         const weight = req.body.weight;
+
 
         let exist = await db.User.findOne({ where: { email: email } })
         const hash_password = await bcrypt.hash(password, 10);
@@ -40,24 +45,49 @@ router.post('/signup',async(req,res)=>{
             weight:weight
         }
         if (exist) {
-            res.status(401).json({ message: "User Already Exist" })
+        
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:409,
+                message:'User Already Exist',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(409).json(response)
 
         }
        else{
         if (!firstName ||!lastName || !email || !password ||!profilePic  ||!mobileNumber ||!dateOfBirth ||!gender ||!height ||!weight ) {
-           
-            res.status(401).json({ message: "Enter All Values" })
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:422,
+                message:'Enter All Values',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(422).json(response)
         }
         else if (password.length < 8) {
-            
-            res.status(401).json({ message: "Password cannot be less than 8 characters" })
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:401,
+                message:'Password cannot be less than 8 characters',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(401).json(response)
         }
         else {
-            // console.log(obj);
             let data = await db.User.create(obj)
 
             let response = {
-                message: "Successful",
+                status: "success",
                 data: data.dataValues,
             }
             res.status(200).json(response)
@@ -65,35 +95,64 @@ router.post('/signup',async(req,res)=>{
     }
     }
     catch (err) {
-        res.status(500).send({error:"Internal Server Error"})
+        const date = new Date 
+        let response = {
+            status: "error",
+            code:500,
+            message:'Internal Server Error',
+            timestamp:date,
+            request_id:requestId
+
+        }
+        res.status(500).send(response)
     }
 })
 
-router.get('/getUserData/:id',async(req,res)=>{  
-
+router.get('/getUserData/:id',authTokenRequired,async(req,res)=>{  
+    const requestId = generateRequestId();
     try {
         const userID = req.params.id;
 
         let userData = await db.User.findOne({ where: { id: userID } })
         
-            // console.log('userData >> ',userData?.dataValues);
-
+            console.log('userData >> ',userData?.dataValues);
+        if (userData){
             let response = {
-                message: "Successful",
+                status: "success",
                 data: userData?.dataValues,
             }
             res.status(200).json(response)
-        
+        }
+        else{
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:404,
+                message:'Not Found',
+                timestamp:date,
+                request_id:requestId
+    
+            }
+            res.status(404).send(response)
+        }
     
     }
     catch (err) {
-        // console.log('err >> ',err)
-        res.status(500).send({error:"Internal Server Error"})
+        const date = new Date 
+        let response = {
+            status: "error",
+            code:500,
+            message:'Internal Server Error',
+            timestamp:date,
+            request_id:requestId
+
+        }
+        res.status(500).send(response)
     }
 })
 
-router.put('/updateUserData/:id',async(req,res)=>{  
-
+router.put('/updateUserData/:id',authTokenRequired,async(req,res)=>{  
+    const requestId = generateRequestId();
     try {
         const userID = req.params.id;
         const firstName = req.body.firstName;
@@ -108,6 +167,7 @@ router.put('/updateUserData/:id',async(req,res)=>{
         const weight = req.body.weight;
 
         
+        let exist = await db.User.findOne({ where: { id: userID } })
         const hash_password = await bcrypt.hash(password, 10);
 
         const obj = {
@@ -124,81 +184,182 @@ router.put('/updateUserData/:id',async(req,res)=>{
         }
        
         if (!firstName ||!lastName || !email || !password ||!profilePic  ||!mobileNumber ||!dateOfBirth ||!gender ||!height ||!weight ) {
-           
-            res.status(401).json({ message: "Enter All Values" })
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:422,
+                message:'Enter All Values',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(422).json(response)
         }
         else if (password.length < 8) {
-            
-            res.status(401).json({ message: "Password cannot be less than 8 characters" })
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:401,
+                message:'Password cannot be less than 8 characters',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(401).json(response)
         }
         else {
             // console.log(obj);
-            
-            let data = await db.User.update(obj,{ where: { id: userID } })
+            if (exist){
+                let data = await db.User.update(obj,{ where: { id: userID } })
 
-            let response = {
-                message: "Successful",
-                data: data.dataValues,
+                let response = {
+                    status: "success",
+                }
+                res.status(200).json(response)
             }
-            res.status(200).json(response)
+            else{
+                const date = new Date 
+                let response = {
+                    status: "error",
+                    code:404,
+                    message:'Not Found',
+                    timestamp:date,
+                    request_id:requestId
+        
+                }
+                res.status(404).send(response)
+            }
         }
     }
     
     catch (err) {
-        // console.log('err >> ',err)
-        res.status(500).send({error:"Internal Server Error"})
+        const date = new Date 
+        let response = {
+            status: "error",
+            code:500,
+            message:'Internal Server Error',
+            timestamp:date,
+            request_id:requestId
+
+        }
+        res.status(500).send(response)
     }
 })
 
 
 
-router.delete('/deleteUserData/:id',async(req,res)=>{  
-
+router.delete('/deleteUserData/:id',authTokenRequired,async(req,res)=>{  
+    const requestId = generateRequestId();
     try {
        
         const userID = req.params.id;
 
-        db.User.destroy({ where: { id: userID } })
-       
-
+        let exist = await db.User.findOne({ where: { id: userID } })
+        if (exist){
+             db.User.destroy({ where: { id: userID } })
             let response = {
-                message: "Successfully Deleted",
+                status: "success"
             }
             res.status(200).json(response)
-        
+        }
+        else{
+            const date = new Date 
+            let response = {
+                status: "error",
+                code:404,
+                message:'Not Found',
+                timestamp:date,
+                request_id:requestId
+    
+            }
+            res.status(404).send(response)
+        }
     }
     catch (err) {
-        res.status(500).send({error:"Internal Server Error"})
+        const date = new Date 
+        let response = {
+            status: "error",
+            code:500,
+            message:'Internal Server Error',
+            timestamp:date,
+            request_id:requestId
+
+        }
+        res.status(500).send(response)
     }
 })
 
 router.post('/signin',async(req,res)=>{
-  
-    console.log(req.body);
-    
+    const requestId = generateRequestId();
+    try{
+        
     const{email,password}=req.body;
     if(!email || !password){
-        return res.status(400).send({error:"Fill all fields"})
-    }
+        
+        const date = new Date 
+            let response = {
+                status: "error",
+                code:422,
+                message:'Enter All Values',
+                timestamp:date,
+                request_id:requestId
 
-    const savedUser = await db.User.findOne({email:email})
-    if(!savedUser){
-        return res.status(422).send({error:"inavlid credentials"})
+            }
+            res.status(422).json(response)
     }
-    try{
+    else{
+    const savedUser = await db.User.findOne({where:{email:email}})
+    if(!savedUser){
+        const date = new Date 
+            let response = {
+                status: "error",
+                code:422,
+                message:'invalid credentials',
+                timestamp:date,
+                request_id:requestId
+
+            }
+            res.status(422).json(response)
+    }
+    else{
         bcrypt.compare(password,savedUser.password,(err,result)=>{
             if(result){
                 const token = jwt.sign({_id:savedUser._id},process.env.jwt_secret, { expiresIn: '2h' });
-                
-                    res.send({token})
+                let response = {
+                    status: "success",
+                    data:{
+                        token:token
+                    }
+                }
+                res.status(200).json(response)
             }
             else{
-                return res.status(422).send({error:"inavlid credentials"})
+                const date = new Date 
+                let response = {
+                    status: "error",
+                    code:422,
+                    message:'invalid credentials',
+                    timestamp:date,
+                    request_id:requestId
+    
+                }
+                res.status(422).json(response)
             }
         })
     }
+}
+    }
     catch(err){
-        res.status(500).send({error:"Internal Server Error"})
+        const date = new Date 
+        let response = {
+            status: "error",
+            code:500,
+            message:'Internal Server Error',
+            timestamp:date,
+            request_id:requestId
+
+        }
+        res.status(500).send(response)
     }
 })
 
